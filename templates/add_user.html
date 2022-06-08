@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+    <head>
+       <script type="text/javascript">
+
+        // 회원가입 화면의 입력값들을 검사한다.
+        function checkValue()
+        {
+            var form = document.userInfo;
+        
+            if(!form.id.value){
+                alert("아이디를 입력하세요.");
+                return false;
+            }
+            
+            if(form.idDuplication.value != "idCheck"){
+                alert("아이디 중복체크를 해주세요.");
+                return false;
+            }
+            
+            if(!form.password.value){
+                alert("비밀번호를 입력하세요.");
+                return false;
+            }
+            
+            if(!form.name.value){
+                alert("이름을 입력하세요.");
+                return false;
+            }  
+           
+            
+            if(!form.phone.value){
+                alert("전화번호를 입력하세요.");
+                return false;
+            }
+            
+            if(isNaN(form.phone.value)){
+                alert("전화번호는 - 제외한 숫자만 입력해주세요.");
+                return false;
+            }
+           
+        }
+        
+        // 취소 버튼 클릭시 첫화면으로 이동
+        function goFirstForm() {
+            location.href="./index.html";
+        }    
+        
+        // 아이디 중복체크 화면open
+        function openIdChk(){
+        
+            window.name = "parentForm";
+            window.open("check_idform",
+                    "check_idform", "width=500, height=300, resizable = no, scrollbars = no");    
+        }
+ 
+        
+   </script>
+    
+    </head>
+    <body>
+        <form name= "UserInfo" action="{{ url_for('add_user')}}" method="POST">
+          <h3>Student Information</h3>
+            <table>
+              <tr>
+                <td>userID</td>
+                <td>
+                  <input type="text" name="userID">
+                  <input type="button" value="Check Availablity" onclick="openIdChk()"> 
+                </td>
+              </tr>
+              <tr>
+                <td>userPW</td>
+                <td>
+                  <input type="text" name="userPW">
+                </td>
+              </tr>
+              <tr>
+                <td>userName</td>
+                <td>
+                  <input type="text" name="userName">
+                </td>
+              </tr>
+              <tr>
+                <td>userPhoneNum</td>
+                <td>
+                  <input type="text" name="userPhoneNum">
+                </td>
+              </tr>
+            </table>
+                <div class="button">
+                    <input class="submit_button" type="submit" value="submit" /> 
+                    <input class="cancel_button" type="button" value="cancel" onclick="openIdChk()" />
+                </div>
+              
+        </form>
+    </body>
+</html>
