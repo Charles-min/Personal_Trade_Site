@@ -1,7 +1,6 @@
 from turtle import update
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, redirect, render_template, request, url_for, session
 from flask_sqlalchemy import SQLAlchemy
-
 
 app = Flask(__name__)
 
@@ -12,7 +11,7 @@ db = SQLAlchemy(app)
 
 
 class USER(db.Model):
-    idx = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
+    # idx = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
     userID = db.Column(db.String(30), primary_key=True, unique=True)
     userPW = db.Column(db.String(50))
     userName = db.Column(db.String(100))
@@ -50,14 +49,22 @@ class PRODUCT(db.Model):
         self.productInfo = productInfo
 
 
+################################################
+# 이상민 수정 부분
+################################################
+
 @app.route('/')
 def index():
-    # 회원 가입 시 입력 값 유지를 위한 변수들
+    # add_user 페이지에서 사용할 전역변수
     global signUp_userID
     global signUp_userPW
     global signUp_userName
     global signUp_userPhoneNum
     global signUp_IdDuplicate
+
+    # 로그인 시 필요한 전역변수
+    global signIn_ID
+    global signIn_PW
 
     # index.html 처음 접속하면 회원가입 시 사용했던 변수들 초기화
     signUp_userID = ''
@@ -65,6 +72,10 @@ def index():
     signUp_userName = ''
     signUp_userPhoneNum = ''
     signUp_IdDuplicate = True
+
+    # 처음 접속하면 로그인 값들 초기화
+    signIn_ID = ''
+    signIn_PW = ''
 
     return render_template('index.html')
 
@@ -76,8 +87,8 @@ signUp_userName = ''
 signUp_userPhoneNum = ''
 signUp_IdDuplicate = True
 
-################################################
-@app.route('/add_user/', methods=['GET', 'POST'])
+
+@app.route('/add_user', methods=['GET', 'POST'])
 def add_user():
     global signUp_userID
     global signUp_userPW
@@ -86,30 +97,18 @@ def add_user():
     global signUp_IdDuplicate
 
     if request.method == 'POST':
-        if not request.form['userID'] or not request.form['userPW'] or not request.form['userName'] or not request.form[
-            'userPhoneNum']:
+        if not request.form['userID'] or not request.form['userPW'] or not request.form['userName'] or not request.form['userPhoneNum']:
             signUp_userID = request.form['userID']
             signUp_userPW = request.form['userPW']
             signUp_userName = request.form['userName']
             signUp_userPhoneNum = request.form['userPhoneNum']
             flash('There are items that require your attention.')
-        elif signUp_IdDuplicate:
-            signUp_userID = request.form['userID']
-            signUp_userPW = request.form['userPW']
-            signUp_userName = request.form['userName']
-            signUp_userPhoneNum = request.form['userPhoneNum']
-            flash('Validate the ID duplication.')
-        elif signUp_userID != request.form['userID']:
-            flash('Please double check ID again.')
-            signUp_userID = request.form['userID']
-            signUp_userPW = request.form['userPW']
-            signUp_userName = request.form['userName']
-            signUp_userPhoneNum = request.form['userPhoneNum']
+
         else:
             user = USER(request.form['userID'], request.form['userPW'], request.form['userName'],
                         request.form['userPhoneNum'])
             db.session.add(user)
-            db.session.commit
+            db.session.commit()
             flash('You have successfully sign up as a member')
             # 회원가입 성공했으므로 다시 입력값 초기화
             signUp_userID = ''
@@ -119,24 +118,44 @@ def add_user():
             signUp_IdDuplicate = True
 
             return redirect(url_for('index'))
+    else:
+        return render_template('add_user.html', userID=signUp_userID, userPW=signUp_userPW, userName=signUp_userName,
+                               userPhoneNum=signUp_userPhoneNum)
 
 
-@app.route('/check_idform/', methods=['GET', 'POST'])
-def idDuplicateCheck():
+'''   
+       elif signUp_IdDuplicate:
+           signUp_userID = request.form['userID']
+           signUp_userPW = request.form['userPW']
+           signUp_userName = request.form['userName']
+           signUp_userPhoneNum = request.form['userPhoneNum']
+           flash('Validate the ID duplication.')
+       elif signUp_userID != request.form['userID']:
+           flash('Please double check ID again.')
+           signUp_userID = request.form['userID']
+           signUp_userPW = request.form['userPW']
+           signUp_userName = request.form['userName']
+           signUp_userPhoneNum = request.form['userPhoneNum']
+       '''
+
+
+# 에러 나중에 잡기
+@app.route('/check_idform', methods=['GET', 'POST'])
+def check_idform():
     global signUp_userID
     global signUp_userPW
     global signUp_IdDuplicate
 
     signUp_userPW = request.form['userPW']
 
-    if not request.form['signUp_userID']:
+    if not request.form['userID']:
         flash('Enter the ID and then Retry the ID duplication.')
         return redirect(url_for('add_user'))
 
     if request.method == 'POST':
 
-        id = USER.query.filter_by(userID=request.form['userID']).first()
-        if (id):
+        id_c = USER.query.filter_by(signUp_userID=request.form['userID']).first()
+        if id_c:
             flash('ID already exists. You have entered other ID')
 
             signUp_userID = ''
@@ -149,6 +168,60 @@ def idDuplicateCheck():
             signUp_IdDuplicate = False
             return redirect(url_for('add_user'))
 
+    else:
+        return render_template('check_idform.html', signUp_userID=userID)
+
+
+signIn_ID = ''
+signIn_PW = ''
+
+
+@app.route('/sign_in', methods=['GET', 'POST'])
+def sign_in():
+    global signIn_ID
+    global signIn_PW
+
+    if request.method == 'POST':
+        if not (request.form['userID'] and request.form['userPW']):
+            flash('아이디, 비밀번호 모두를 입력해주세요.', 'error')
+            return redirect(url_for('sign_in'))
+
+        # id와 일치하는 계정을 찾는다
+        signIn_ID = request.form['userID']
+        signIn_PW = request.form['userPW']
+        user = USER.query.filter_by(userID=request.form['userID']).first()
+
+        if not user:
+            flash('존재하지 않는 아이디입니다.', 'error')
+            signIn_ID = ''
+            signIn_ID = ''
+            return redirect(url_for('sign_in'))
+
+        elif user.userPW != request.form['userPW']:
+            signIn_ID = request.form['userID']
+            signIn_PW = ''
+            flash('비밀번호를 다시 확인해주세요.', 'error')
+            return redirect(url_for('sign_in'))
+
+        else:
+            signIn_ID = ''
+            signIn_PW = ''
+            flash('로그인을 성공했습니다.', 'error')
+            session['userID'] = user.userID
+            return redirect(url_for('index'))
+
+    return render_template('sign_in.html', userID=signIn_ID, userPW=signIn_PW)
+
+
+@app.route('/log_out/', methods=['GET', 'POST'])
+def log_out():
+    # 로그인 세션에서 닉네임을 꺼낸 뒤, 다시 홈으로 라우팅
+    session.pop('userID', None)
+    flash('Successful log out.')
+    return redirect(url_for('index'))
+
+################################################
+# 수정 부분 마지막 
 ################################################
 @app.route('/add_product', methods=['GET', 'POST'])
 def add_product():
@@ -176,7 +249,6 @@ def show_product():
 @app.route('/show_user')
 def show_user():
     return render_template('show_user.html', USER=USER.query.all())
-
 
 
 ##############################################
